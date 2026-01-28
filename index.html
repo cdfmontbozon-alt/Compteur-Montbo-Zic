@@ -133,7 +133,7 @@
     <!-- HEADER -->
     <header>
         <div class="header-left">
-            <h1>Festival Montbozic - Compteur d'entrées</h1>
+            <h1>Festival Counter</h1>
             <div style="display:flex; align-items:center; gap:5px;">
                 <p>Sync Cloud</p>
                 <div class="status-dot" id="connection-status" title="Statut Connexion"></div>
@@ -295,9 +295,7 @@
         let pendingTargetBtn = null;
         let isLocalUpdate = false; // Pour éviter les boucles infinie d'écriture
 
-
-        
-               // --- SYNCHRONISATION FIREBASE ---
+        // --- SYNCHRONISATION FIREBASE ---
         
         // 1. Écoute des changements venant du Cloud (Sync)
         dbRef.on('value', (snapshot) => {
@@ -305,17 +303,21 @@
             const statusDot = document.getElementById('connection-status');
             
             if (data) {
-                // FIX : On vérifie si la liste des portes est bien présente et valide
-                if (!data.gates || data.gates.length === 0) {
-                     console.warn("Données corrompues détectées (gates manquant). Réinitialisation par défaut.");
-                     // On fusionne : on garde la capacité actuelle (si valide) mais on remet les portes par défaut
-                     state = {
-                         capacity: data.capacity || DEFAULT_STATE.capacity,
-                         gates: JSON.parse(JSON.stringify(DEFAULT_STATE.gates))
-                     };
+                // --- FIX : Sécurité pour éviter le crash "reduce undefined" ---
+                if (!data.gates || !Array.isArray(data.gates) || data.gates.length === 0) {
+                    console.warn("Données corrompues ou vides détectées (gates manquant). Réinitialisation automatique.");
+                    
+                    // On fusionne : on garde la capacité si elle existe, mais on remet les portes par défaut
+                    state = {
+                        capacity: data.capacity || DEFAULT_STATE.capacity,
+                        gates: JSON.parse(JSON.stringify(DEFAULT_STATE.gates))
+                    };
+                    
+                    // On enregistre la version corrigée immédiatement dans le cloud
+                    dbRef.set(state).catch(err => console.error("Erreur lors de la réparation des données", err));
                 } else {
-                     // Tout est bon, on charge les données
-                     state = data;
+                    // Tout est bon, on charge les données
+                    state = data;
                 }
 
                 statusDot.classList.add('online');
@@ -330,6 +332,20 @@
             statusDot.classList.remove('online');
             showToast("Erreur de connexion au serveur");
         });
+
+        // 2. Fonction de sauvegarde (Écriture vers le Cloud)
+        function saveState() {
+            isLocalUpdate = true; // On marque que c'est une modification locale
+            dbRef.set(state)
+                .then(() => {
+                    isLocalUpdate = false;
+                    updateUI(false); // Mise à jour visuelle locale immédiate
+                })
+                .catch((err) => {
+                    isLocalUpdate = false;
+                    console.error(err);
+                    showToast("Erreur de sauvegarde");
+                });
         }
 
         // --- NAVIGATION & HORLOGE ---
@@ -379,12 +395,12 @@
 
         // --- LOGIQUE METIER ---
         
-         // Sécurité : si state.gates n'existe pas (ou est null/undefined), on retourne 0 au lieu de planter
+        function getTotal() {
+            // --- FIX : Sécurité additionnelle pour éviter le crash ---
             if (!state || !state.gates || !Array.isArray(state.gates)) {
                 return 0;
             }
             return state.gates.reduce((sum, g) => sum + g.count, 0);
-        }
         }
 
         function updateGateCount(id, delta) {
@@ -484,7 +500,10 @@
                 warningEl.classList.remove('visible');
             }
 
-            state.gates.filter(g => g.active).forEach(gate => {
+            // Double sécurité : on filtre les portes actives seulement si gates existe
+            const activeGates = state.gates ? state.gates.filter(g => g.active) : [];
+            
+            activeGates.forEach(gate => {
                 const div = document.createElement('div');
                 div.className = 'gate-card';
                 div.innerHTML = `
@@ -517,24 +536,26 @@
             else if(percent >= 75) configFill.style.backgroundColor = 'var(--warning)';
             else configFill.style.backgroundColor = 'var(--accent)';
 
-            state.gates.forEach(gate => {
-                const item = document.createElement('div');
-                item.className = 'config-item';
-                item.innerHTML = `
-                    <div>
-                        <div style="font-weight:600;">${gate.name}</div>
-                        <small style="color:var(--text-light)">Compteur actuel: <strong>${gate.count}</strong></small>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <label class="switch" style="transform:scale(0.8)">
-                            <input type="checkbox" ${gate.active ? 'checked' : ''} onchange="toggleGateActive(${gate.id})">
-                            <span class="slider"></span>
-                        </label>
-                        <button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteGate(${gate.id})">Suppr</button>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
+            if(state.gates) {
+                state.gates.forEach(gate => {
+                    const item = document.createElement('div');
+                    item.className = 'config-item';
+                    item.innerHTML = `
+                        <div>
+                            <div style="font-weight:600;">${gate.name}</div>
+                            <small style="color:var(--text-light)">Compteur actuel: <strong>${gate.count}</strong></small>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label class="switch" style="transform:scale(0.8)">
+                                <input type="checkbox" ${gate.active ? 'checked' : ''} onchange="toggleGateActive(${gate.id})">
+                                <span class="slider"></span>
+                            </label>
+                            <button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteGate(${gate.id})">Suppr</button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            }
         }
 
         function renderStats() {
@@ -542,7 +563,7 @@
             container.innerHTML = '';
             
             const total = getTotal();
-            const activeGates = state.gates.filter(g => g.active);
+            const activeGates = state.gates ? state.gates.filter(g => g.active) : [];
             
             if(activeGates.length === 0) {
                 container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-light)">Aucune porte active</div>';
@@ -597,5 +618,3 @@
     </script>
 </body>
 </html>
-
-
