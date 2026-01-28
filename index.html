@@ -23,7 +23,7 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text);
             height: 100vh;
@@ -37,8 +37,8 @@
             color: white;
             padding-top: max(1rem, env(safe-area-inset-top));
             padding-bottom: 1rem;
-            padding-left: 1.5rem;
-            padding-right: 1.5rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
             box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
             z-index: 10;
             display: flex;
@@ -47,21 +47,22 @@
             flex-shrink: 0;
         }
 
-        .header-left h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+        .header-left { flex: 1; }
+        .header-left h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .header-left p { font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
         
-        .clock { font-family: monospace; font-size: 1.1rem; font-weight: 700; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 6px; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block; margin-left: 10px; transition: background 0.3s; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+        .clock { font-family: monospace; font-size: 1.1rem; font-weight: 700; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 6px; margin-left: 10px; flex-shrink: 0; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block; margin-left: 6px; transition: background 0.3s; box-shadow: 0 0 5px rgba(0,0,0,0.2); vertical-align: middle; }
         .status-dot.online { background: #10b981; box-shadow: 0 0 8px #10b981; }
 
-        main { flex: 1; overflow-y: auto; position: relative; padding: 1rem; padding-bottom: 5rem; }
+        main { flex: 1; overflow-y: auto; position: relative; padding: 1rem; padding-bottom: 6rem; }
 
         .view { display: none; animation: fadeIn 0.3s ease; }
         .view.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .card { background: var(--surface); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
-        h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--text); font-weight: 700; display: flex; align-items: center; justify-content: space-between; }
+        .card { background: var(--surface); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+        h2 { font-size: 1.1rem; margin-bottom: 0.8rem; color: var(--text); font-weight: 700; display: flex; align-items: center; justify-content: space-between; }
         
         button { cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; }
         button:active { transform: scale(0.96); }
@@ -81,7 +82,7 @@
         input:checked + .slider:before { transform: translateX(22px); }
 
         .gauge-container { text-align: center; background: linear-gradient(135deg, var(--primary), #818cf8); color: white; padding: 2rem 1rem; border-radius: var(--radius); margin-bottom: 1.5rem; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
-        .total-count { font-size: 4rem; font-weight: 800; line-height: 1; margin-bottom: 0.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .total-count { font-size: 3.5rem; font-weight: 800; line-height: 1; margin-bottom: 0.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .total-label { font-size: 0.9rem; opacity: 0.9; font-weight: 500; margin-bottom: 1rem; }
         
         .progress-track { background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden; width: 100%; max-width: 300px; margin: 0 auto; }
@@ -92,12 +93,12 @@
         .gate-list { display: grid; gap: 1rem; grid-template-columns: 1fr; }
         @media(min-width: 600px) { .gate-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); } }
 
-        .gate-card { background: var(--surface); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; border-left: 5px solid var(--primary); }
-        .gate-info { text-align: center; flex: 1; }
-        .gate-name { font-size: 0.85rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; }
-        .gate-value { font-size: 2.5rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+        .gate-card { background: var(--surface); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; border-left:5px solid var(--primary); }
+        .gate-info { text-align: center; flex:1; min-width: 0; padding: 0 10px; }
+        .gate-name { font-size: 0.75rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .gate-value { font-size: 2rem; font-weight: 800; color: var(--text); line-height: 1.1; }
 
-        .btn-control { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.15); flex-shrink: 0; }
+        .btn-control { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.15); flex-shrink: 0; }
         .btn-minus { background-color: #e5e7eb; color: var(--text); }
         .btn-plus { background-color: var(--accent); font-size: 2rem; margin-left: 1rem; }
 
@@ -106,7 +107,7 @@
         .stat-bar-bg { height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; }
         .stat-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
 
-        nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 0.5rem 0; padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); z-index: 50; }
+        nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top:1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 0.5rem 0; padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); z-index: 50; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .nav-item { background: none; border: none; color: var(--text-light); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; font-weight: 600; padding: 0.5rem; }
         .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
         .nav-item.active { color: var(--primary); }
@@ -122,6 +123,40 @@
         .config-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
         .config-item:last-child { border: none; }
         .config-preview { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 12px; margin-bottom: 1rem; text-align: center; }
+
+        /* --- ANIMATION SHAKE --- */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake { animation: shake 0.3s; }
+
+        /* --- STYLE POUR LE FILTRE PAR PASTILLES --- */
+        .filter-label { font-size:0.85rem; font-weight:600; margin-bottom:0.5rem; display:block; color:var(--text); }
+        .filter-scroll-container { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; align-items: center;}
+        .filter-scroll-container::-webkit-scrollbar { display: none; }
+        
+        .filter-chip {
+            flex-shrink: 0;
+            background: white;
+            border:1px solid #e5e7eb;
+            color: var(--text-light);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .filter-chip.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
+        }
     </style>
     
     <!-- Importation de Firebase (Compat pour simplicité sans npm) -->
@@ -148,6 +183,13 @@
         <!-- VUE 1: COMPTEURS -->
         <section id="view-counter" class="view active">
             
+            <div class="card">
+                <label class="filter-label">Filtrer les portes (Cliquez pour choisir)</label>
+                <div class="filter-scroll-container" id="gate-filter-container">
+                    <!-- Les pastilles seront générées ici par JS (plus de bouton "Tout voir") -->
+                </div>
+            </div>
+
             <div class="switch-container">
                 <span style="font-weight:600; font-size:0.9rem;">Mode Compact (Cacher Total)</span>
                 <label class="switch">
@@ -266,6 +308,7 @@
   appId: "1:493404487529:web:e7b1c07febbeae555dc7f8"
 };
 
+
         // Initialisation de Firebase
         try {
             if (!firebase.apps.length) {
@@ -293,7 +336,68 @@
         const ADMIN_PIN = "0306";
         let pendingTargetView = null;
         let pendingTargetBtn = null;
-        let isLocalUpdate = false; // Pour éviter les boucles infinie d'écriture
+        let isLocalUpdate = false;
+        
+        // --- GESTION DU FILTRE LOCAL (Multi-sélection) ---
+        let selectedGates = []; // Tableau d'IDs
+
+        function initFilter() {
+            // Charger les filtres enregistrés
+            const saved = localStorage.getItem('selectedGates');
+            if (saved) {
+                try {
+                    selectedGates = JSON.parse(saved);
+                } catch(e) {
+                    selectedGates = [];
+                }
+            } else {
+                selectedGates = []; // Par défaut : tout voir
+            }
+            renderFilterChips();
+        }
+
+        function renderFilterChips() {
+            const container = document.getElementById('gate-filter-container');
+            container.innerHTML = '';
+
+            // Bouton "Tout afficher" SUPPRIMÉ selon la demande de l'utilisateur
+            // Le comportement "Tout voir" est maintenu si le tableau est vide.
+
+            // Boutons pour chaque porte
+            if(state.gates) {
+                state.gates.forEach(gate => {
+                    const chip = document.createElement('div');
+                    chip.className = 'filter-chip';
+                    chip.textContent = gate.name;
+                    
+                    // Si l'ID est dans la sélection, on active
+                    if(selectedGates.map(String).includes(String(gate.id))) {
+                        chip.classList.add('active');
+                    }
+
+                    chip.onclick = () => toggleFilter(gate.id);
+                    container.appendChild(chip);
+                });
+            }
+        }
+
+        function toggleFilter(id) {
+            const idStr = String(id);
+            if (selectedGates.map(String).includes(idStr)) {
+                // Retirer si déjà présent
+                selectedGates = selectedGates.filter(gId => String(gId) !== idStr);
+            } else {
+                // Ajouter
+                selectedGates.push(id);
+            }
+            saveFilter();
+            renderFilterChips();
+            renderCounters();
+        }
+
+        function saveFilter() {
+            localStorage.setItem('selectedGates', JSON.stringify(selectedGates));
+        }
 
         // --- SYNCHRONISATION FIREBASE ---
         
@@ -321,6 +425,7 @@
                 }
 
                 statusDot.classList.add('online');
+                renderFilterChips(); // Mettre à jour la liste du filtre si de nouvelles portes sont ajoutées
                 updateUI(false); 
             } else {
                 // Si la base est vide, on écrit les valeurs par défaut
@@ -384,8 +489,9 @@
                 showToast("Accès autorisé");
             } else {
                 showToast("Code incorrect");
-                document.getElementById('auth-pin').classList.add('shake');
-                setTimeout(() => document.getElementById('auth-pin').classList.remove('shake'), 500);
+                const pinInput = document.getElementById('auth-pin');
+                pinInput.classList.add('shake');
+                setTimeout(() => pinInput.classList.remove('shake'), 500);
             }
         }
 
@@ -404,7 +510,7 @@
         }
 
         function updateGateCount(id, delta) {
-            const gate = state.gates.find(g => g.id === id);
+            const gate = state.gates.find(g => g.id == id); // Comparaison souple
             if(!gate) return;
             if(gate.count + delta < 0) return showToast("Le compteur ne peut pas être négatif");
 
@@ -428,19 +534,20 @@
             document.getElementById('new-gate-name').value = '';
             saveState();
             renderConfigList();
+            renderFilterChips(); // Mise à jour du filtre sur tous les appareils
             showToast("Porte ajoutée");
         }
 
         function deleteGate(id) {
             if(confirm("Supprimer cette porte définitivement ?")) {
-                state.gates = state.gates.filter(g => g.id !== id);
+                state.gates = state.gates.filter(g => g.id != id);
                 saveState();
                 renderConfigList();
             }
         }
 
         function toggleGateActive(id) {
-            const gate = state.gates.find(g => g.id === id);
+            const gate = state.gates.find(g => g.id == id);
             if(gate) {
                 gate.active = !gate.active;
                 saveState();
@@ -500,10 +607,20 @@
                 warningEl.classList.remove('visible');
             }
 
-            // Double sécurité : on filtre les portes actives seulement si gates existe
-            const activeGates = state.gates ? state.gates.filter(g => g.active) : [];
+            // --- LOGIQUE DU FILTRE MULTI-SELECTION ---
+            let gatesToShow = [];
             
-            activeGates.forEach(gate => {
+            if (selectedGates.length === 0) {
+                // Si rien n'est sélectionné, on affiche toutes les portes actives (comportement par défaut "Tout voir")
+                gatesToShow = state.gates ? state.gates.filter(g => g.active) : [];
+            } else {
+                // Sinon on affiche uniquement les portes sélectionnées dans le filtre
+                const selectedIdsStr = selectedGates.map(String);
+                gatesToShow = state.gates.filter(g => selectedIdsStr.includes(String(g.id)));
+            }
+
+            // Affichage
+            gatesToShow.forEach(gate => {
                 const div = document.createElement('div');
                 div.className = 'gate-card';
                 div.innerHTML = `
@@ -607,6 +724,7 @@
         // --- INIT ---
         document.addEventListener('DOMContentLoaded', () => {
             startClock();
+            initFilter(); // Initialiser le filtre
             
             document.getElementById('compact-mode-toggle').addEventListener('change', (e) => {
                 const gauge = document.getElementById('main-gauge');
@@ -618,4 +736,3 @@
     </script>
 </body>
 </html>
-
