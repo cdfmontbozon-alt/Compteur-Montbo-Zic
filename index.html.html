@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Compteur Festival Sync</title>
+    <style>
+        /* --- STYLE --- */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4338ca;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --radius: 16px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding-top: max(1rem, env(safe-area-inset-top));
+            padding-bottom: 1rem;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-left h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+        .header-left p { font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+        
+        .clock { font-family: monospace; font-size: 1.1rem; font-weight: 700; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 6px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block; margin-left: 10px; transition: background 0.3s; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+        .status-dot.online { background: #10b981; box-shadow: 0 0 8px #10b981; }
+
+        main { flex: 1; overflow-y: auto; position: relative; padding: 1rem; padding-bottom: 5rem; }
+
+        .view { display: none; animation: fadeIn 0.3s ease; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: var(--surface); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+        h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--text); font-weight: 700; display: flex; align-items: center; justify-content: space-between; }
+        
+        button { cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; }
+        button:active { transform: scale(0.96); }
+        
+        .btn-primary { background: var(--primary); color: white; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; width: 100%; }
+        .btn-danger { background: var(--danger); color: white; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; }
+        
+        input { width: 100%; padding: 0.8rem; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 1rem; font-size: 1rem; outline: none; background: #f9fafb; }
+        input:focus { border-color: var(--primary); background: white; }
+
+        .switch-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; background: #e0e7ff; padding: 10px; border-radius: 12px; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .gauge-container { text-align: center; background: linear-gradient(135deg, var(--primary), #818cf8); color: white; padding: 2rem 1rem; border-radius: var(--radius); margin-bottom: 1.5rem; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+        .total-count { font-size: 4rem; font-weight: 800; line-height: 1; margin-bottom: 0.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .total-label { font-size: 0.9rem; opacity: 0.9; font-weight: 500; margin-bottom: 1rem; }
+        
+        .progress-track { background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden; width: 100%; max-width: 300px; margin: 0 auto; }
+        .progress-fill { height: 100%; background: #ffffff; width: 0%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .capacity-warning { font-size: 0.8rem; margin-top: 8px; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+        .capacity-warning.visible { opacity: 1; }
+
+        .gate-list { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+        @media(min-width: 600px) { .gate-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); } }
+
+        .gate-card { background: var(--surface); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; border-left: 5px solid var(--primary); }
+        .gate-info { text-align: center; flex: 1; }
+        .gate-name { font-size: 0.85rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; }
+        .gate-value { font-size: 2.5rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+
+        .btn-control { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.15); flex-shrink: 0; }
+        .btn-minus { background-color: #e5e7eb; color: var(--text); }
+        .btn-plus { background-color: var(--accent); font-size: 2rem; margin-left: 1rem; }
+
+        .stat-row { margin-bottom: 1.2rem; }
+        .stat-header { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600; }
+        .stat-bar-bg { height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; }
+        .stat-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
+
+        nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 0.5rem 0; padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); z-index: 50; }
+        .nav-item { background: none; border: none; color: var(--text-light); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; font-weight: 600; padding: 0.5rem; }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
+        .nav-item.active { color: var(--primary); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+        .modal-overlay.open { display: flex; opacity: 1; }
+        .modal-content { background: white; padding: 2rem; border-radius: var(--radius); width: 90%; max-width: 320px; text-align: center; box-shadow: var(--shadow-lg); transform: scale(0.9); transition: transform 0.3s; }
+        .modal-overlay.open .modal-content { transform: scale(1); }
+
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: #333; color: white; padding: 12px 24px; border-radius: 30px; font-size: 0.9rem; opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 200; box-shadow: 0 5px 15px rgba(0,0,0,0.3); font-weight: 500; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .config-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+        .config-item:last-child { border: none; }
+        .config-preview { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 12px; margin-bottom: 1rem; text-align: center; }
+    </style>
+    
+    <!-- Importation de Firebase (Compat pour simplicité sans npm) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-left">
+            <h1>Festival Counter</h1>
+            <div style="display:flex; align-items:center; gap:5px;">
+                <p>Sync Cloud</p>
+                <div class="status-dot" id="connection-status" title="Statut Connexion"></div>
+            </div>
+        </div>
+        <div class="clock" id="clock">00:00</div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main>
+        
+        <!-- VUE 1: COMPTEURS -->
+        <section id="view-counter" class="view active">
+            
+            <div class="switch-container">
+                <span style="font-weight:600; font-size:0.9rem;">Mode Compact (Cacher Total)</span>
+                <label class="switch">
+                    <input type="checkbox" id="compact-mode-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="gauge-container" id="main-gauge">
+                <div class="total-count" id="display-total">0</div>
+                <div class="total-label">Festivaliers présents</div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="capacity-warning" id="capacity-warning">⚠️ Jauge Bientôt Pleine</div>
+                <div style="margin-top:5px; font-size:0.8rem; opacity:0.8;" id="capacity-text">0 / 5000</div>
+            </div>
+
+            <div class="gate-list" id="gate-list-container">
+                <!-- Les portes seront générées ici par JS -->
+            </div>
+        </section>
+
+        <!-- VUE 2: CONFIGURATION -->
+        <section id="view-config" class="view">
+            <div class="card">
+                <h2>🎯 Jauge Maximum</h2>
+                
+                <!-- Aperçu du taux de remplissage en config -->
+                <div class="config-preview">
+                    <div style="font-size:0.8rem; color:var(--text-light); margin-bottom:4px;">Taux de remplissage actuel</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--primary);" id="config-percent-display">0%</div>
+                    <div class="progress-track" style="height:6px; margin-top:8px; background:#e2e8f0;">
+                        <div class="progress-fill" id="config-progress-fill" style="width:0%; background:var(--accent);"></div>
+                    </div>
+                    <div style="font-size:0.8rem; margin-top:4px; color:var(--text-light);" id="config-count-display">0 pers.</div>
+                </div>
+
+                <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-light)">Capacité totale du site</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="input-capacity" placeholder="Ex: 5000">
+                    <button class="btn-primary" style="width:auto;" onclick="saveCapacity()">OK</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🚪 Gestion des Portes</h2>
+                <div style="display:flex; gap:8px; margin-bottom:1rem;">
+                    <input type="text" id="new-gate-name" placeholder="Nouvelle porte..." style="margin-bottom:0;">
+                    <button class="btn-primary" style="width:auto; white-space:nowrap;" onclick="addGate()">Ajouter</button>
+                </div>
+                <div id="config-gate-list">
+                    <!-- Liste de config générée par JS -->
+                </div>
+            </div>
+
+            <div class="card" style="border: 1px solid var(--danger);">
+                <h2 style="color:var(--danger)">⚠️ Zone de Danger</h2>
+                <p style="font-size:0.9rem; margin-bottom:1rem; color:var(--text-light)">Réinitialiser tous les compteurs à zéro (fin de journée).</p>
+                <button class="btn-danger" style="width:100%" onclick="requestReset()">Reset Global</button>
+            </div>
+        </section>
+
+        <!-- VUE 3: STATISTIQUES -->
+        <section id="view-stats" class="view">
+            <div class="card">
+                <h2>📊 Répartition</h2>
+                <div id="stats-container">
+                    <!-- Stats générées par JS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- NAVIGATION BOTTOM -->
+    <nav>
+        <button class="nav-item active" onclick="switchTab('view-counter', this)">
+            <div class="nav-icon">➕</div>
+            Comptage
+        </button>
+        <button class="nav-item" onclick="checkAuth('view-config', this)">
+            <div class="nav-icon">⚙️</div>
+            Config
+        </button>
+        <button class="nav-item" onclick="switchTab('view-stats', this)">
+            <div class="nav-icon">📈</div>
+            Stats
+        </button>
+    </nav>
+
+    <!-- MODAL AUTH -->
+    <div class="modal-overlay" id="auth-modal">
+        <div class="modal-content">
+            <h2 style="justify-content:center;">Accès Sécurisé</h2>
+            <p style="margin-bottom:1rem; color:var(--text-light);">Entrez le code administrateur</p>
+            <input type="password" id="auth-pin" placeholder="PIN" style="text-align:center; letter-spacing:4px; font-size:1.2rem;">
+            <button class="btn-primary" onclick="verifyAuth()">Confirmer</button>
+            <button style="margin-top:1rem; background:none; color:var(--text-light); width:100%;" onclick="closeAuthModal()">Annuler</button>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div class="toast" id="toast">Message</div>
+
+    <!-- LOGIC -->
+    <script>
+        // --- CONFIGURATION FIREBASE ---
+        // REMPLACEZ CECI PAR VOS CLÉS COPIÉES DANS LA CONSOLE FIREBASE
+        const firebaseConfig = {
+  apiKey: "AIzaSyDgjalutLtwW1iL-mB6gfro2Qjk-SsJOZg",
+  authDomain: "compteur-festival.firebaseapp.com",
+  databaseURL: "https://compteur-festival-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "compteur-festival",
+  storageBucket: "compteur-festival.firebasestorage.app",
+  messagingSenderId: "493404487529",
+  appId: "1:493404487529:web:e7b1c07febbeae555dc7f8"
+};
+
+        // Initialisation de Firebase
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+        } catch (e) {
+            console.error("Erreur config Firebase (avez-vous remplacé les clés ?)", e);
+            alert("ERREUR CONFIGURATION FIREBASE : Vérifiez que vous avez bien collé vos clés dans le code source HTML.");
+        }
+
+        const dbRef = firebase.database().ref('festivalData');
+
+        // --- ETAT INITIAL ---
+        const DEFAULT_STATE = {
+            capacity: 5000,
+            gates: [
+                { id: 1, name: 'Porte Principale', count: 0, active: true },
+                { id: 2, name: 'Accès VIP', count: 0, active: true },
+                { id: 3, name: 'Staff Artiste', count: 0, active: false }
+            ]
+        };
+
+        // Variable locale pour stocker les données
+        let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        const ADMIN_PIN = "0306";
+        let pendingTargetView = null;
+        let pendingTargetBtn = null;
+        let isLocalUpdate = false; // Pour éviter les boucles infinie d'écriture
+
+        // --- SYNCHRONISATION FIREBASE ---
+        
+        // 1. Écoute des changements venant du Cloud (Sync)
+        dbRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            const statusDot = document.getElementById('connection-status');
+            
+            if (data) {
+                // On met à jour l'état local avec les données du cloud
+                state = data;
+                statusDot.classList.add('online');
+                
+                // Mise à jour de l'UI sans re-sauvegarder (pour éviter boucle)
+                updateUI(false); 
+            } else {
+                // Si la base est vide, on écrit les valeurs par défaut
+                dbRef.set(state);
+            }
+        }, (error) => {
+            console.error(error);
+            const statusDot = document.getElementById('connection-status');
+            statusDot.classList.remove('online');
+            showToast("Erreur de connexion au serveur");
+        });
+
+        // 2. Fonction de sauvegarde (Écriture vers le Cloud)
+        function saveState() {
+            isLocalUpdate = true; // On marque que c'est une modification locale
+            dbRef.set(state)
+                .then(() => {
+                    isLocalUpdate = false;
+                    updateUI(false); // Mise à jour visuelle locale immédiate
+                })
+                .catch((err) => {
+                    isLocalUpdate = false;
+                    console.error(err);
+                    showToast("Erreur de sauvegarde");
+                });
+        }
+
+        // --- NAVIGATION & HORLOGE ---
+        function startClock() {
+            const el = document.getElementById('clock');
+            setInterval(() => {
+                const now = new Date();
+                el.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+            }, 1000);
+        }
+
+        function switchTab(viewId, btnEl) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+            if(viewId === 'view-stats') renderStats();
+        }
+
+        // --- AUTHENTIFICATION ---
+        function checkAuth(viewId, btnEl) {
+            pendingTargetView = viewId;
+            pendingTargetBtn = btnEl;
+            const modal = document.getElementById('auth-modal');
+            document.getElementById('auth-pin').value = '';
+            modal.classList.add('open');
+            setTimeout(() => document.getElementById('auth-pin').focus(), 100);
+        }
+
+        function verifyAuth() {
+            const input = document.getElementById('auth-pin').value;
+            if(input === ADMIN_PIN) {
+                closeAuthModal();
+                switchTab(pendingTargetView, pendingTargetBtn);
+                renderConfigList();
+                showToast("Accès autorisé");
+            } else {
+                showToast("Code incorrect");
+                document.getElementById('auth-pin').classList.add('shake');
+                setTimeout(() => document.getElementById('auth-pin').classList.remove('shake'), 500);
+            }
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.remove('open');
+        }
+
+        // --- LOGIQUE METIER ---
+        
+        function getTotal() {
+            return state.gates.reduce((sum, g) => sum + g.count, 0);
+        }
+
+        function updateGateCount(id, delta) {
+            const gate = state.gates.find(g => g.id === id);
+            if(!gate) return;
+            if(gate.count + delta < 0) return showToast("Le compteur ne peut pas être négatif");
+
+            gate.count += delta;
+            saveState();
+        }
+
+        function saveCapacity() {
+            const val = parseInt(document.getElementById('input-capacity').value);
+            if(!val || val <= 0) return showToast("Capacité invalide");
+            state.capacity = val;
+            saveState();
+            showToast("Jauge mise à jour");
+        }
+
+        function addGate() {
+            const name = document.getElementById('new-gate-name').value.trim();
+            if(!name) return showToast("Nom requis");
+            const newId = Date.now(); // ID basé sur le temps (unique)
+            state.gates.push({ id: newId, name: name, count: 0, active: true });
+            document.getElementById('new-gate-name').value = '';
+            saveState();
+            renderConfigList();
+            showToast("Porte ajoutée");
+        }
+
+        function deleteGate(id) {
+            if(confirm("Supprimer cette porte définitivement ?")) {
+                state.gates = state.gates.filter(g => g.id !== id);
+                saveState();
+                renderConfigList();
+            }
+        }
+
+        function toggleGateActive(id) {
+            const gate = state.gates.find(g => g.id === id);
+            if(gate) {
+                gate.active = !gate.active;
+                saveState();
+                renderConfigList();
+            }
+        }
+
+        function requestReset() {
+            if(confirm("Êtes-vous SUR de vouloir remettre tous les compteurs à zéro ? Cette action se propagera à tous les téléphones.")) {
+                if(confirm("Dernière confirmation : Reset global ?")) {
+                    state.gates.forEach(g => g.count = 0);
+                    saveState();
+                    showToast("Compteurs remis à zéro");
+                }
+            }
+        }
+
+        // --- RENDU UI ---
+
+        function updateUI(fromServer = true) {
+            // Si la màj vient du serveur, on met à jour les inputs aussi
+            if(fromServer) {
+               document.getElementById('input-capacity').value = state.capacity; 
+            }
+
+            renderCounters();
+            if(document.getElementById('view-stats').classList.contains('active')) renderStats();
+            if(document.getElementById('view-config').classList.contains('active')) renderConfigList();
+        }
+
+        function renderCounters() {
+            const total = getTotal();
+            const container = document.getElementById('gate-list-container');
+            container.innerHTML = '';
+
+            document.getElementById('display-total').textContent = total;
+            document.getElementById('capacity-text').textContent = `${total} / ${state.capacity}`;
+            
+            const pct = Math.min((total / state.capacity) * 100, 100);
+            const fill = document.getElementById('progress-fill');
+            fill.style.width = pct + '%';
+            
+            const warningEl = document.getElementById('capacity-warning');
+            const gaugeEl = document.getElementById('main-gauge');
+
+            if(pct >= 90) {
+                fill.style.backgroundColor = 'var(--danger)';
+                gaugeEl.style.background = 'linear-gradient(135deg, var(--danger), #f87171)';
+                warningEl.classList.add('visible');
+            } else if (pct >= 75) {
+                fill.style.backgroundColor = 'var(--warning)';
+                gaugeEl.style.background = 'linear-gradient(135deg, var(--warning), #fbbf24)';
+                warningEl.classList.remove('visible');
+            } else {
+                fill.style.backgroundColor = 'white';
+                gaugeEl.style.background = 'linear-gradient(135deg, var(--primary), #818cf8)';
+                warningEl.classList.remove('visible');
+            }
+
+            state.gates.filter(g => g.active).forEach(gate => {
+                const div = document.createElement('div');
+                div.className = 'gate-card';
+                div.innerHTML = `
+                    <button class="btn-control btn-minus" onclick="updateGateCount(${gate.id}, -1)">−</button>
+                    <div class="gate-info">
+                        <div class="gate-name">${gate.name}</div>
+                        <div class="gate-value">${gate.count}</div>
+                    </div>
+                    <button class="btn-control btn-plus" onclick="updateGateCount(${gate.id}, 1)">+</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderConfigList() {
+            const list = document.getElementById('config-gate-list');
+            list.innerHTML = '';
+
+            const total = getTotal();
+            const capacity = state.capacity;
+            const percent = capacity > 0 ? ((total / capacity) * 100).toFixed(1) : 0;
+
+            document.getElementById('config-percent-display').textContent = percent + '%';
+            document.getElementById('config-count-display').textContent = total + ' pers. / ' + capacity;
+            
+            const configFill = document.getElementById('config-progress-fill');
+            configFill.style.width = Math.min(percent, 100) + '%';
+
+            if(percent >= 90) configFill.style.backgroundColor = 'var(--danger)';
+            else if(percent >= 75) configFill.style.backgroundColor = 'var(--warning)';
+            else configFill.style.backgroundColor = 'var(--accent)';
+
+            state.gates.forEach(gate => {
+                const item = document.createElement('div');
+                item.className = 'config-item';
+                item.innerHTML = `
+                    <div>
+                        <div style="font-weight:600;">${gate.name}</div>
+                        <small style="color:var(--text-light)">Compteur actuel: <strong>${gate.count}</strong></small>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label class="switch" style="transform:scale(0.8)">
+                            <input type="checkbox" ${gate.active ? 'checked' : ''} onchange="toggleGateActive(${gate.id})">
+                            <span class="slider"></span>
+                        </label>
+                        <button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteGate(${gate.id})">Suppr</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function renderStats() {
+            const container = document.getElementById('stats-container');
+            container.innerHTML = '';
+            
+            const total = getTotal();
+            const activeGates = state.gates.filter(g => g.active);
+            
+            if(activeGates.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-light)">Aucune porte active</div>';
+                return;
+            }
+
+            const sortedGates = [...activeGates].sort((a,b) => b.count - a.count);
+
+            sortedGates.forEach(gate => {
+                const shareTotal = total > 0 ? ((gate.count / total) * 100).toFixed(1) : 0;
+                const shareCapacity = ((gate.count / state.capacity) * 100).toFixed(1);
+                const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                const div = document.createElement('div');
+                div.className = 'stat-row';
+                div.innerHTML = `
+                    <div class="stat-header">
+                        <span>${gate.name}</span>
+                        <span>${gate.count} pers.</span>
+                    </div>
+                    <div class="stat-bar-bg">
+                        <div class="stat-bar-fill" style="width: ${shareCapacity}%; background-color: ${color}"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-light); margin-top:4px;">
+                        <span>${shareTotal}% du trafic</span>
+                        <span>${shareCapacity}% de jauge</span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            startClock();
+            
+            document.getElementById('compact-mode-toggle').addEventListener('change', (e) => {
+                const gauge = document.getElementById('main-gauge');
+                if(e.target.checked) gauge.style.display = 'none';
+                else gauge.style.display = 'block';
+            });
+        });
+
+    </script>
+</body>
+</html>
