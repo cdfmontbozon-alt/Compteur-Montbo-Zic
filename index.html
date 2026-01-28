@@ -295,7 +295,9 @@
         let pendingTargetBtn = null;
         let isLocalUpdate = false; // Pour éviter les boucles infinie d'écriture
 
-        // --- SYNCHRONISATION FIREBASE ---
+
+        
+               // --- SYNCHRONISATION FIREBASE ---
         
         // 1. Écoute des changements venant du Cloud (Sync)
         dbRef.on('value', (snapshot) => {
@@ -303,11 +305,20 @@
             const statusDot = document.getElementById('connection-status');
             
             if (data) {
-                // On met à jour l'état local avec les données du cloud
-                state = data;
+                // FIX : On vérifie si la liste des portes est bien présente et valide
+                if (!data.gates || data.gates.length === 0) {
+                     console.warn("Données corrompues détectées (gates manquant). Réinitialisation par défaut.");
+                     // On fusionne : on garde la capacité actuelle (si valide) mais on remet les portes par défaut
+                     state = {
+                         capacity: data.capacity || DEFAULT_STATE.capacity,
+                         gates: JSON.parse(JSON.stringify(DEFAULT_STATE.gates))
+                     };
+                } else {
+                     // Tout est bon, on charge les données
+                     state = data;
+                }
+
                 statusDot.classList.add('online');
-                
-                // Mise à jour de l'UI sans re-sauvegarder (pour éviter boucle)
                 updateUI(false); 
             } else {
                 // Si la base est vide, on écrit les valeurs par défaut
@@ -319,20 +330,6 @@
             statusDot.classList.remove('online');
             showToast("Erreur de connexion au serveur");
         });
-
-        // 2. Fonction de sauvegarde (Écriture vers le Cloud)
-        function saveState() {
-            isLocalUpdate = true; // On marque que c'est une modification locale
-            dbRef.set(state)
-                .then(() => {
-                    isLocalUpdate = false;
-                    updateUI(false); // Mise à jour visuelle locale immédiate
-                })
-                .catch((err) => {
-                    isLocalUpdate = false;
-                    console.error(err);
-                    showToast("Erreur de sauvegarde");
-                });
         }
 
         // --- NAVIGATION & HORLOGE ---
@@ -382,8 +379,12 @@
 
         // --- LOGIQUE METIER ---
         
-        function getTotal() {
+         // Sécurité : si state.gates n'existe pas (ou est null/undefined), on retourne 0 au lieu de planter
+            if (!state || !state.gates || !Array.isArray(state.gates)) {
+                return 0;
+            }
             return state.gates.reduce((sum, g) => sum + g.count, 0);
+        }
         }
 
         function updateGateCount(id, delta) {
@@ -596,4 +597,5 @@
     </script>
 </body>
 </html>
+
 
